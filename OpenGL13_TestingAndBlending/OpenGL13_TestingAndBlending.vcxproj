@@ -163,6 +163,9 @@
     <None Include="depth_testing.vs" />
     <None Include="loadModel.fs" />
     <None Include="loadModel.vs" />
+    <None Include="stencil_single_color.fs" />
+    <None Include="stencil_testing.fs" />
+    <None Include="stencil_testing.vs" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

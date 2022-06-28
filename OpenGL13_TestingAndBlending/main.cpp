@@ -78,7 +78,7 @@ int main() {
 	//Shader shader("loadModel.vs", "loadModel.fs");
 	//Shader shader("depth_testing.vs", "depth_testing.fs");
 	Shader shader("stencil_testing.vs", "stencil_testing.fs");
-
+	Shader shaderSingleColor("stencil_testing.vs","stencil_single_color.fs");
 	
 	//加载模型
 	//Model Model("Model/nanosuit/nanosuit.obj");
@@ -186,17 +186,32 @@ int main() {
 		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);//清除深度缓存、模板缓存
 
 		//建立渲染对象 
-		shader.use();
-
-		//投影变换、视图变换
+		shaderSingleColor.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+		//shader.setFloat("mixValue", mixValue);
+		shaderSingleColor.setMat4("projection", projection);
+		shaderSingleColor.setMat4("view", view);
+
+		shader.use();
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
-		shader.setFloat("mixValue", mixValue);
+
 
 		//伸缩平移变换
 		glm::mat4 model = glm::mat4(1.0f);
+
+		glStencilMask(0x00);
+		// floor
+		glBindVertexArray(planeVAO);
+		glBindTexture(GL_TEXTURE_2D, floorTexture);
+		shader.setMat4("model", glm::mat4(1.0f));
+		glDrawArrays(GL_TRIANGLES, 0, 6);
+		glBindVertexArray(0);
+
+		//1.渲染通道，正常绘制对象，写入模板缓冲区 
+		glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		glStencilMask(0xFF);
 		// cubes
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
@@ -208,12 +223,32 @@ int main() {
 		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
 		shader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
-		// floor
-		glBindVertexArray(planeVAO);
-		glBindTexture(GL_TEXTURE_2D, floorTexture);
-		shader.setMat4("model", glm::mat4(1.0f));
-		glDrawArrays(GL_TRIANGLES, 0, 6);
+
+		//2.渲染通道:现在绘制对象的轻微缩放版本，这次禁用模板书写。
+		//因为模板缓冲区现在被填满了几个1。缓冲区中为1的部分不绘制，因此只绘制
+		//对象的大小差异，使它看起来像边界。
+		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		glStencilMask(0x00);
+		glDisable(GL_DEPTH_TEST);
+		shaderSingleColor.use();
+		float scale = 1.1f;
+		// cubes
+		glBindVertexArray(cubeVAO);
+		glBindTexture(GL_TEXTURE_2D, cubeTexture);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+		shaderSingleColor.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
+		model = glm::mat4(1.0f);
+		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		model = glm::scale(model, glm::vec3(scale, scale, scale));
+		shaderSingleColor.setMat4("model", model);
+		glDrawArrays(GL_TRIANGLES, 0, 36);
 		glBindVertexArray(0);
+		glStencilMask(0xFF);
+		glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		glEnable(GL_DEPTH_TEST);
 
 		//Model.Draw(shader);
 

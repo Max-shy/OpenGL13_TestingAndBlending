@@ -55,5 +55,14 @@
     <None Include="depth_testing.fs">
       <Filter>头文件</Filter>
     </None>
+    <None Include="stencil_testing.vs">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="stencil_testing.fs">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="stencil_single_color.fs">
+      <Filter>头文件</Filter>
+    </None>
   </ItemGroup>
 </Project>
