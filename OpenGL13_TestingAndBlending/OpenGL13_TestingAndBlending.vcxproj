@@ -159,6 +159,8 @@
     <ClInclude Include="stb_image.h" />
   </ItemGroup>
   <ItemGroup>
+    <None Include="blending.fs" />
+    <None Include="blending.vs" />
     <None Include="depth_testing.fs" />
     <None Include="depth_testing.vs" />
     <None Include="loadModel.fs" />

@@ -64,5 +64,11 @@
     <None Include="stencil_single_color.fs">
       <Filter>头文件</Filter>
     </None>
+    <None Include="blending.vs">
+      <Filter>头文件</Filter>
+    </None>
+    <None Include="blending.fs">
+      <Filter>头文件</Filter>
+    </None>
   </ItemGroup>
 </Project>

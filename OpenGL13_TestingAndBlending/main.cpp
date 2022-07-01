@@ -24,7 +24,7 @@ const unsigned int SCR_HEIGHT = 600;
 float mixValue = 0.2f;
 
 // camera
-Camera camera(glm::vec3(0.0f, 0.0f, 10.0f));
+Camera camera(glm::vec3(0.0f, 0.0f, 3.0f));
 float lastX = SCR_WIDTH / 2.0f;
 float lastY = SCR_HEIGHT / 2.0f;
 bool firstMouse = true;
@@ -67,18 +67,19 @@ int main() {
 
 	//深度缓存 测试
 	glEnable(GL_DEPTH_TEST);
-	glDepthFunc(GL_LESS);
+	//glDepthFunc(GL_LESS);
 
-	//模板缓存测试
-	glEnable(GL_STENCIL_TEST);
-	glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-	glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
+	////模板缓存测试
+	//glEnable(GL_STENCIL_TEST);
+	//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+	//glStencilOp(GL_KEEP, GL_KEEP, GL_REPLACE);
 
 	//着色器
 	//Shader shader("loadModel.vs", "loadModel.fs");
 	//Shader shader("depth_testing.vs", "depth_testing.fs");
-	Shader shader("stencil_testing.vs", "stencil_testing.fs");
-	Shader shaderSingleColor("stencil_testing.vs","stencil_single_color.fs");
+	//Shader shader("stencil_testing.vs", "stencil_testing.fs");
+	//Shader shaderSingleColor("stencil_testing.vs","stencil_single_color.fs");
+	Shader shader("blending.vs", "blending.fs");
 	
 	//加载模型
 	//Model Model("Model/nanosuit/nanosuit.obj");
@@ -137,6 +138,18 @@ int main() {
 		-5.0f, -0.5f, -5.0f,  0.0f, 2.0f,
 		 5.0f, -0.5f, -5.0f,  2.0f, 2.0f
 	};
+	//Grass
+	float transparentVertices[] = {
+		// positions         // texture Coords 
+		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+		0.0f, -0.5f,  0.0f,  0.0f,  1.0f,
+		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+
+		0.0f,  0.5f,  0.0f,  0.0f,  0.0f,
+		1.0f, -0.5f,  0.0f,  1.0f,  1.0f,
+		1.0f,  0.5f,  0.0f,  1.0f,  0.0f
+	};
+
 	// cube VAO
 	unsigned int cubeVAO, cubeVBO;
 	glGenVertexArrays(1, &cubeVAO);
@@ -149,6 +162,7 @@ int main() {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glBindVertexArray(0);
+
 	// plane VAO
 	unsigned int planeVAO, planeVBO;
 	glGenVertexArrays(1, &planeVAO);
@@ -161,11 +175,35 @@ int main() {
 	glEnableVertexAttribArray(1);
 	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
 	glBindVertexArray(0);
+	// transparent VAO
+	unsigned int transparentVAO, transparentVBO;
+	glGenVertexArrays(1, &transparentVAO);
+	glGenBuffers(1, &transparentVBO);
+	glBindVertexArray(transparentVAO);
+	glBindBuffer(GL_ARRAY_BUFFER, transparentVBO);
+	glBufferData(GL_ARRAY_BUFFER, sizeof(transparentVertices), transparentVertices, GL_STATIC_DRAW);
+	glEnableVertexAttribArray(0);
+	glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)0);
+	glEnableVertexAttribArray(1);
+	glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 5 * sizeof(float), (void*)(3 * sizeof(float)));
+	glBindVertexArray(0);
+
 
 	// load textures
 	// -------------
 	unsigned int cubeTexture = loadTexture("textures/marble.jpg");
 	unsigned int floorTexture = loadTexture("textures/metal.png");
+	unsigned int transparentTexture = loadTexture("textures/grass.png");
+
+	//location of grass
+	vector<glm::vec3> vegetation
+	{
+		glm::vec3(-1.5f, 0.0f, -0.48f),
+		glm::vec3(1.5f, 0.0f, 0.51f),
+		glm::vec3(0.0f, 0.0f, 0.7f),
+		glm::vec3(-0.3f, 0.0f, -2.3f),
+		glm::vec3(0.5f, 0.0f, -0.6f)
+	};
 
 	// shader configuration
 	// --------------------
@@ -183,25 +221,22 @@ int main() {
 
 		glClearColor(0.1f, 0.1f, 0.1f, 1.0f);
 
-		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT | GL_STENCIL_BUFFER_BIT);//清除深度缓存、模板缓存
+		glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT/* | GL_STENCIL_BUFFER_BIT*/);//清除深度缓存、模板缓存
 
 		//建立渲染对象 
-		shaderSingleColor.use();
+		//shaderSingleColor.use();
 		glm::mat4 projection = glm::perspective(glm::radians(camera.Zoom), (float)SCR_WIDTH / (float)SCR_HEIGHT, 0.1f, 100.0f);
 		glm::mat4 view = camera.GetViewMatrix();
+		glm::mat4 model = glm::mat4(1.0f);//伸缩平移变换
 		//shader.setFloat("mixValue", mixValue);
-		shaderSingleColor.setMat4("projection", projection);
-		shaderSingleColor.setMat4("view", view);
+		//shaderSingleColor.setMat4("projection", projection);
+		//shaderSingleColor.setMat4("view", view);
 
 		shader.use();
 		shader.setMat4("projection", projection);
 		shader.setMat4("view", view);
 
-
-		//伸缩平移变换
-		glm::mat4 model = glm::mat4(1.0f);
-
-		glStencilMask(0x00);
+		//glStencilMask(0x00);
 		// floor
 		glBindVertexArray(planeVAO);
 		glBindTexture(GL_TEXTURE_2D, floorTexture);
@@ -210,8 +245,8 @@ int main() {
 		glBindVertexArray(0);
 
 		//1.渲染通道，正常绘制对象，写入模板缓冲区 
-		glStencilFunc(GL_ALWAYS, 1, 0xFF);
-		glStencilMask(0xFF);
+		//glStencilFunc(GL_ALWAYS, 1, 0xFF);
+		//glStencilMask(0xFF);
 		// cubes
 		glBindVertexArray(cubeVAO);
 		glActiveTexture(GL_TEXTURE0);
@@ -224,31 +259,42 @@ int main() {
 		shader.setMat4("model", model);
 		glDrawArrays(GL_TRIANGLES, 0, 36);
 
+		// vegetation
+		glBindVertexArray(transparentVAO);
+		glBindTexture(GL_TEXTURE_2D, transparentTexture);
+		for (unsigned int i = 0; i < vegetation.size(); i++)
+		{
+			model = glm::mat4(1.0f);
+			model = glm::translate(model, vegetation[i]);
+			shader.setMat4("model", model);
+			glDrawArrays(GL_TRIANGLES, 0, 6);
+		}
+
 		//2.渲染通道:现在绘制对象的轻微缩放版本，这次禁用模板书写。
 		//因为模板缓冲区现在被填满了几个1。缓冲区中为1的部分不绘制，因此只绘制
 		//对象的大小差异，使它看起来像边界。
-		glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
-		glStencilMask(0x00);
-		glDisable(GL_DEPTH_TEST);
-		shaderSingleColor.use();
-		float scale = 1.1f;
-		// cubes
-		glBindVertexArray(cubeVAO);
-		glBindTexture(GL_TEXTURE_2D, cubeTexture);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
-		model = glm::scale(model, glm::vec3(scale, scale, scale));
-		shaderSingleColor.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		model = glm::mat4(1.0f);
-		model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
-		model = glm::scale(model, glm::vec3(scale, scale, scale));
-		shaderSingleColor.setMat4("model", model);
-		glDrawArrays(GL_TRIANGLES, 0, 36);
-		glBindVertexArray(0);
-		glStencilMask(0xFF);
-		glStencilFunc(GL_ALWAYS, 0, 0xFF);
-		glEnable(GL_DEPTH_TEST);
+		//glStencilFunc(GL_NOTEQUAL, 1, 0xFF);
+		//glStencilMask(0x00);
+		//glDisable(GL_DEPTH_TEST);
+		//shaderSingleColor.use();
+		//float scale = 1.1f;
+		//// cubes
+		//glBindVertexArray(cubeVAO);
+		//glBindTexture(GL_TEXTURE_2D, cubeTexture);
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(-1.0f, 0.0f, -1.0f));
+		//model = glm::scale(model, glm::vec3(scale, scale, scale));
+		//shaderSingleColor.setMat4("model", model);
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
+		//model = glm::mat4(1.0f);
+		//model = glm::translate(model, glm::vec3(2.0f, 0.0f, 0.0f));
+		//model = glm::scale(model, glm::vec3(scale, scale, scale));
+		//shaderSingleColor.setMat4("model", model);
+		//glDrawArrays(GL_TRIANGLES, 0, 36);
+		//glBindVertexArray(0);
+		//glStencilMask(0xFF);
+		//glStencilFunc(GL_ALWAYS, 0, 0xFF);
+		//glEnable(GL_DEPTH_TEST);
 
 		//Model.Draw(shader);
 
@@ -340,8 +386,12 @@ unsigned int loadTexture(char const* path)
 		glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
 		glGenerateMipmap(GL_TEXTURE_2D);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+		//glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT); // for this tutorial: use GL_CLAMP_TO_EDGE to prevent semi-transparent borders. Due to interpolation it takes texels from next repeat 
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, format == GL_RGBA ? GL_CLAMP_TO_EDGE : GL_REPEAT);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 
